@@ -1,0 +1,15 @@
+{
+  "name": "site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "todoo.top 官网：游戏作品展示、App 介绍、产品资讯，带管理后台；访客只读",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "start": "node --experimental-sqlite server.js",
+    "dev": "node --watch --experimental-sqlite server.js",
+    "selftest": "node --experimental-sqlite selftest.js",
+    "seed": "node --experimental-sqlite seed.js"
+  }
+}

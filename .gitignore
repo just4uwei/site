@@ -1,0 +1,11 @@
+# 运行时数据（本地开发用；线上在 /var/lib/<name>）
+data/
+
+# Node 依赖（骨架零外部依赖，忽略以防万一）
+node_modules/
+
+# SSH 私钥（勿泄露/勿入库）
+*.pem
+
+# 部署打包产物（由 deploy/pack.sh 生成）
+deploy/*-server.tar.gz

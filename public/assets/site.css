@@ -1,0 +1,340 @@
+/* site.css - 前台样式。
+ *
+ * 设计方向：整站是一张**方格稿纸**——一个人做游戏和工具时用来画草图的那种纸。
+ * 层级只有三层：桌面(--desk) → 稿纸(--paper，方格印在它上面) → 压在纸上的白块。
+ * 正文一律落在白块里，格线永远不穿过字。
+ * 抬头不是装饰性的大图，而是像稿纸抬头一样印着字段名、填上真实数据的字段行。
+ * 全站**无圆角、无阴影**，只有 1px 墨线与格子。
+ *
+ * 字体全部走系统栈：Google Fonts 在大陆取不到，站点不能挂在它上面。
+ * 标题衬线（拉丁 Georgia / 中文宋体），正文黑体，编号与日期等宽——三种角色泾渭分明。
+ */
+
+/* ---------- tokens ---------- */
+:root {
+  --ink:        #16202b;   /* 墨：正文与主线条 */
+  --desk:       #dbe1d8;   /* 桌面：稿纸之外的那一圈 */
+  --paper:      #eef1ea;   /* 稿纸本身：冷调偏绿的灰白，不是暖奶油色 */
+  --paper-2:    #fbfcfa;   /* 压在稿纸上的白块：卡片、抬头、资讯行 */
+  --grid:       #dde4dc;   /* 方格细线 */
+  --grid-major: #ccd6cb;   /* 每 4 格一条粗线 */
+  --dim:        #5d6b66;   /* 次级文字 */
+  --jade:       #1f5f52;   /* 主交互色：链接、按钮、栏目眉标 */
+  --jade-soft:  #e2ece7;
+  --seal:       #a8432c;   /* 印泥红：只用在「当前位置」与「草稿」两处 */
+
+  --cell: 32px;            /* 格子边长，所有间距都是它的整数倍 */
+  --page: 1120px;
+  --rule: 1px solid var(--ink);
+  --rule-thin: 1px solid var(--grid-major);
+
+  /* 拉丁字面排在中文字面前面：否则 Windows 上 SimSun 会把 todoo / App 也画了，
+     又细又假。Georgia 是低对比、字重扎实的衬线，放大不塌。 */
+  --f-display: Georgia, "Iowan Old Style", "Songti SC", "Source Han Serif SC",
+               "Noto Serif SC", SimSun, serif;
+  --f-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
+            system-ui, -apple-system, sans-serif;
+  --f-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+  font: 400 1rem/1.75 var(--f-body);
+  font-feature-settings: "tnum" 1;
+  overflow-wrap: break-word;
+}
+
+img { max-width: 100%; display: block; }
+
+a { color: var(--jade); text-decoration: none; border-bottom: 1px solid var(--jade-soft); }
+a:hover { border-bottom-color: var(--jade); }
+
+:focus-visible { outline: 2px solid var(--jade); outline-offset: 3px; }
+
+/* 方格是**印在这张纸上**的，不是铺在桌面上：所以底纹挂在 .shell 而不是 body。
+   于是层级读起来是 桌面 → 稿纸 → 压在纸上的白块，文字永远落在白块里，
+   格线不会穿过正文。左右留出桌面色，纸的边界看得见。 */
+.shell {
+  max-width: var(--page);
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 0 var(--cell) calc(var(--cell) * .5);
+  border-left: var(--rule-thin);
+  border-right: var(--rule-thin);
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size:
+    calc(var(--cell) * 4) calc(var(--cell) * 4),
+    calc(var(--cell) * 4) calc(var(--cell) * 4),
+    var(--cell) var(--cell),
+    var(--cell) var(--cell);
+}
+
+/* ---------- 抬头：像稿纸的字段行，印着字段名再填真实数据 ---------- */
+.masthead { padding-top: calc(var(--cell) * 1.5); }
+
+.sheet {
+  border: var(--rule);
+  background: var(--paper-2);
+  position: relative;
+}
+
+/* 字段行：字段名等宽小字，值在下面。分隔线是 1px 墨线 */
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+  border-bottom: var(--rule);
+}
+.field { padding: .6rem .9rem .7rem; border-right: var(--rule-thin); }
+.field:last-child { border-right: 0; }
+.field-k {
+  font: 400 .6875rem/1 var(--f-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.field-v { font: 500 .875rem/1.4 var(--f-body); margin-top: .3rem; }
+
+.sheet-body { padding: calc(var(--cell) * 1.25) calc(var(--cell) * 1.25) calc(var(--cell) * 1.5); }
+
+.wordmark {
+  font: 700 clamp(2.4rem, 7vw, 4.75rem)/.98 var(--f-display);
+  letter-spacing: -.015em;
+  margin: 0;
+}
+.tagline {
+  margin: .75rem 0 0;
+  font: 400 clamp(1rem, 1.6vw, 1.1875rem)/1.7 var(--f-body);
+  color: var(--dim);
+  max-width: 46ch;
+}
+.intro { margin: 1rem 0 0; max-width: 52ch; }
+
+/* ---------- 导航 ---------- */
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  border-top: var(--rule);
+  margin-top: 0;
+}
+.nav a {
+  flex: 1 1 auto;
+  min-width: 6.5rem;
+  padding: .7rem .9rem;
+  border: 0;
+  border-right: var(--rule-thin);
+  font: 500 .875rem/1.4 var(--f-body);
+  color: var(--ink);
+  text-align: center;
+  background: transparent;
+}
+.nav a:last-child { border-right: 0; }
+.nav a:hover { background: var(--jade-soft); color: var(--jade); }
+/* 当前位置：唯一用印泥红的地方（另一处是后台的草稿标） */
+.nav a[aria-current="page"] {
+  background: var(--ink);
+  color: var(--paper-2);
+}
+.nav a[aria-current="page"]::before {
+  content: "";
+  display: inline-block;
+  width: .4rem; height: .4rem;
+  background: var(--seal);
+  margin-right: .5rem;
+  vertical-align: .1em;
+}
+.nav .count {
+  font: 400 .6875rem/1 var(--f-mono);
+  color: var(--dim);
+  margin-left: .4rem;
+}
+.nav a[aria-current="page"] .count { color: #9fb0a8; }
+
+/* ---------- 栏目 ---------- */
+.section { padding: calc(var(--cell) * 1.75) 0 0; }
+/* 标题写在纸上（不是白块里），但要把格线压掉——扁平的 --paper 底色就是「擦干净的格子」 */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  background: var(--paper);
+  border-bottom: var(--rule);
+  padding: .3rem .25rem .6rem;
+  margin-bottom: calc(var(--cell) * .875);
+}
+.eyebrow {
+  font: 400 .6875rem/1 var(--f-mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--jade);
+  white-space: nowrap;
+}
+.section-title { font: 700 clamp(1.4rem, 3vw, 2rem)/1.2 var(--f-display); margin: 0; }
+.section-more { margin-left: auto; font-size: .875rem; white-space: nowrap; }
+
+/* ---------- 卡片网格 ---------- */
+.grid {
+  display: grid;
+  gap: var(--cell);
+  grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr));
+}
+.grid.wide { grid-template-columns: repeat(auto-fill, minmax(min(21rem, 100%), 1fr)); }
+
+/* 卡片是压在稿纸上的白块。曾经在四角画过十字定位标，看着像边框断了，撤掉了——
+   方格底纹已经是这个设计的记忆点，不需要第二个装饰。 */
+.card {
+  position: relative;
+  border: var(--rule);
+  background: var(--paper-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-cover {
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  width: 100%;
+  border-bottom: var(--rule);
+  background: var(--jade-soft);
+}
+.card-cover.icon {
+  aspect-ratio: 1;
+  width: 4.5rem;
+  border: var(--rule);
+  margin: .9rem 0 0 .9rem;
+  object-fit: cover;
+}
+.card-body { padding: .9rem 1rem 1.1rem; display: flex; flex-direction: column; gap: .45rem; flex: 1; }
+.card-meta {
+  display: flex;
+  gap: .75rem;
+  font: 400 .6875rem/1 var(--f-mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.card-title { font: 600 1.0625rem/1.4 var(--f-body); margin: 0; }
+.card-title a { color: var(--ink); border: 0; }
+.card-title a:hover { color: var(--jade); }
+.card-sub { margin: 0; font-size: .875rem; color: var(--dim); }
+.card-foot { margin-top: auto; padding-top: .5rem; font-size: .8125rem; }
+
+/* ---------- 资讯：带日期的行，不用卡片 ---------- */
+/* 也是压在稿纸上的白块，否则格线会穿过标题 */
+.rows { border: var(--rule); background: var(--paper-2); }
+.row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr auto;
+  gap: 1rem;
+  align-items: baseline;
+  padding: .9rem 1rem;
+  border-bottom: var(--rule-thin);
+}
+.row:last-child { border-bottom: 0; }
+.row-date { font: 400 .75rem/1.6 var(--f-mono); letter-spacing: .06em; color: var(--dim); }
+.row-title { font: 500 1rem/1.6 var(--f-body); }
+.row-title a { color: var(--ink); border: 0; }
+.row-title a:hover { color: var(--jade); }
+.row-sub { display: block; font-size: .8125rem; color: var(--dim); font-weight: 400; }
+.row-tag {
+  font: 400 .6875rem/1 var(--f-mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--jade);
+  border: var(--rule-thin);
+  padding: .3rem .5rem;
+  white-space: nowrap;
+}
+
+/* ---------- 详情页：整篇就是一张压在稿纸上的白纸 ---------- */
+.entry {
+  margin-top: calc(var(--cell) * 1.5);
+  background: var(--paper-2);
+  border: var(--rule);
+  padding: calc(var(--cell) * .75) calc(var(--cell) * 1.25) calc(var(--cell) * 1.25);
+}
+.entry .section-head { background: transparent; }
+.entry-title { font: 700 clamp(1.9rem, 4.5vw, 3rem)/1.15 var(--f-display); margin: .5rem 0 0; letter-spacing: -.01em; }
+.entry-sub { margin: .6rem 0 0; font-size: 1.0625rem; color: var(--dim); max-width: 54ch; }
+.entry-cover { margin-top: calc(var(--cell) * .875); border: var(--rule); }
+.prose { max-width: 64ch; margin-top: calc(var(--cell) * .875); }
+.prose p { margin: 0 0 1.1em; }
+.prose p:last-child { margin-bottom: 0; }
+
+.shots { display: grid; gap: var(--cell); grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr)); margin-top: var(--cell); }
+.shot { border: var(--rule); background: var(--paper-2); }
+.shot figcaption { padding: .5rem .7rem; font-size: .8125rem; color: var(--dim); border-top: var(--rule-thin); }
+
+.btn {
+  display: inline-block;
+  border: var(--rule);
+  background: var(--ink);
+  color: var(--paper-2);
+  padding: .6rem 1.2rem;
+  font: 500 .9375rem/1.4 var(--f-body);
+  margin-top: calc(var(--cell) * .75);
+}
+.btn:hover { background: var(--jade); border-color: var(--jade); color: #fff; }
+
+.pager { display: flex; gap: 1.5rem; justify-content: space-between; border-top: var(--rule); margin-top: calc(var(--cell) * 1.5); padding-top: .9rem; font-size: .875rem; }
+
+/* ---------- 页脚：备案号是法定展示项，别删 ---------- */
+.foot {
+  margin-top: calc(var(--cell) * 2);
+  background: var(--paper);
+  border-top: var(--rule);
+  padding: calc(var(--cell) * .75) .25rem calc(var(--cell) * 1.5);
+  font-size: .8125rem;
+  color: var(--dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.5rem;
+  align-items: baseline;
+}
+.foot a { color: var(--dim); border-bottom-color: var(--grid-major); }
+.foot a:hover { color: var(--jade); }
+.foot .icp { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .04em; }
+.foot .spacer { margin-left: auto; }
+
+/* ---------- 空状态：是行动提示，不是情绪 ---------- */
+.empty {
+  border: var(--rule-thin);
+  background: var(--paper-2);
+  padding: calc(var(--cell) * .875) 1rem;
+  color: var(--dim);
+  font-size: .9375rem;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- 入场：一次编排好的序列，不是到处撒特效 ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.sheet, .section { animation: rise .5s cubic-bezier(.2, .7, .3, 1) both; }
+.section:nth-of-type(1) { animation-delay: .08s; }
+.section:nth-of-type(2) { animation-delay: .16s; }
+.section:nth-of-type(3) { animation-delay: .24s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 640px) {
+  :root { --cell: 24px; }
+  .row { grid-template-columns: 1fr; gap: .25rem; }
+  .row-tag { justify-self: start; }
+  .nav a { min-width: 5rem; font-size: .8125rem; }
+}

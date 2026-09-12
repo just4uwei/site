@@ -1,0 +1,48 @@
+{
+  "configVersion": 1,
+  "name": "site",
+  "displayName": "官网",
+  "version": "0.1.0",
+  "description": "todoo.top 官网：游戏作品展示、App 介绍、产品资讯，带管理后台；访客只读",
+
+  "runtime": {
+    "kind": "node",
+    "engine": ">=22.5",
+    "entry": "server.js",
+    "flags": ["--experimental-sqlite"]
+  },
+
+  "service": {
+    "port": 8083,
+    "bind": "127.0.0.1",
+    "healthPath": "/api/health",
+    "memoryMax": "512M",
+    "cpuQuota": "80%"
+  },
+
+  "gateway": {
+    "host": "todoo.top",
+    "scheme": "https",
+    "entryPort": 443,
+    "fallback": "http://47.96.140.240:8080",
+    "prefix": "/site",
+    "stripPrefix": true,
+    "root": true,
+    "maxBodySize": "12m",
+    "websocket": false
+  },
+
+  "db": {
+    "kind": "sqlite",
+    "name": "site",
+    "file": "site.db"
+  },
+
+  "env": {
+    "PORT": "8083",
+    "HOST": "127.0.0.1",
+    "SITE_DATA": "/var/lib/site"
+  },
+
+  "secrets": ["ADMIN_PASSWORD_HASH"]
+}
