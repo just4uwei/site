@@ -11,9 +11,10 @@
   --grid-major: #c2cec2;
   --line: #d3dcd2;
   --dim: #5d6b66;
-  --jade: #1f5f52;
-  --jade-soft: #e2ece7;
-  --seal: #a8432c;
+  /* 强调色跟前台走紫（前台是紫夜配色）；红只留给危险动作与"线上"警示，别混用 */
+  --jade: #6d28d9;
+  --jade-soft: #ede9fe;
+  --seal: #b91c1c;
   --f-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC",
             system-ui, -apple-system, sans-serif;
   --f-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
@@ -94,7 +95,7 @@ td.num, th.num { width: 4rem; font-family: var(--f-mono); font-size: .8125rem; }
 /* 日期比排序号宽：6rem 才放得下 2026-06 而不折行 */
 td.date, th.date { width: 6rem; font-family: var(--f-mono); font-size: .8125rem; white-space: nowrap; }
 td.ops { white-space: nowrap; text-align: right; }
-tbody tr:hover { background: #f6f9f5; }
+tbody tr:hover { background: #faf8ff; }
 
 .badge {
   display: inline-block; font: 400 .6875rem/1 var(--f-mono);
@@ -149,7 +150,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--jade); outline: 
 
 /* ---------- 提示条 ---------- */
 .note { border: 1px solid var(--jade); background: var(--jade-soft); color: var(--jade); padding: .55rem .75rem; font-size: .875rem; margin-bottom: .9rem; }
-.note.bad { border-color: var(--seal); background: #f7e7e3; color: var(--seal); }
+.note.bad { border-color: var(--seal); background: #fdeaea; color: var(--seal); }
 .muted { color: var(--dim); font-size: .875rem; }
 
 /* 目标说明：随下拉选择实时变，别让人对着一段固定文案猜自己在管哪一端 */

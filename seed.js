@@ -47,7 +47,7 @@ const APPS = [
 
 const NEWS = [
   {
-    title: '官网上线了',
+    title: '紫夜堂上线了',
     tag: '公告',
     dateline: '2026-09',
     summary: 'todoo.top 备案通过，作品和 App 都搬到这里。',
@@ -78,11 +78,14 @@ function main() {
     });
   }
   store.settings.update({
-    site_title: 'todoo',
-    site_tagline: '一个人做的游戏，和顺手写出来的工具',
+    site_title: '紫夜堂',
+    site_tagline: '独立游戏与小工具的自留地',
     site_intro: '这里放我做的游戏、写的 App，以及它们的更新记录。全部只读——想聊的话，邮件更合适。',
     about_body: '一个人做游戏和小工具，在福建。\n\n游戏偏小、偏慢，通常只有一个核心机制，能在一两个晚上玩完。工具都是先给自己用，用顺了才放出来。\n\n作品与 App 在上面几栏，更新会发在「资讯」。',
     contact_note: '合作、反馈、报 bug 都可以发邮件，一般一两天内回。',
+    hero_since: 'SINCE 2026',
+    hero_tags: '独立游戏,小工具,一个人做',
+    author_note: '一个人做游戏和工具。有事发邮件，一般一两天内回。',
   });
 
   console.log(`已写入 ${n} 条示例内容与站点设置 -> ${store.DATA_DIR}`);

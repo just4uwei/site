@@ -1,4 +1,4 @@
-// site.js - 前台脚本。一份文件带完所有页面，靠 <body data-page="..."> 分派。
+// site.js - 紫夜堂前台。一份文件带完所有页面，靠 <body data-page="..."> 分派。
 //
 // 只读：这里没有任何 POST/PUT/DELETE。访客能做的只有看和跳转。
 //
@@ -36,7 +36,7 @@ function day(ms) {
 }
 const shown = (item) => item.dateline || day(item.created_at);
 
-const coverUrl = (id) => `api/image?id=${encodeURIComponent(id)}`;
+const imgUrl = (id) => `api/image?id=${encodeURIComponent(id)}`;
 
 /** 正文：纯文本按空行分段。不解析 HTML —— 后台内容也不给注入的机会 */
 function paragraphs(text) {
@@ -48,60 +48,49 @@ function paragraphs(text) {
     .join('');
 }
 
-// ---------- 抬头 / 导航 / 页脚 ----------
+const LABEL = { works: '游戏作品', apps: 'App', news: '资讯' };
+const MARK = { works: 'works', apps: 'apps', news: 'journal' };
+const DETAIL_PAGE = { works: 'work.html', apps: 'app.html', news: 'post.html' };
+const detailHref = (kind, id) => `${DETAIL_PAGE[kind]}?id=${encodeURIComponent(id)}`;
+const listHref = (kind) => `${kind}.html`;
 
 const NAV = [
   { href: './', label: '首页', page: 'home' },
-  { href: 'works.html', label: '游戏作品', page: 'works', count: 'works' },
-  { href: 'apps.html', label: 'App', page: 'apps', count: 'apps' },
-  { href: 'news.html', label: '资讯', page: 'news', count: 'news' },
+  { href: 'works.html', label: '游戏作品', page: 'works' },
+  { href: 'apps.html', label: 'App', page: 'apps' },
+  { href: 'news.html', label: '资讯', page: 'news' },
   { href: 'about.html', label: '关于', page: 'about' },
 ];
 
-function renderNav(meta, current) {
-  return `<nav class="nav" aria-label="站点导航">${NAV.map((n) => {
-    const cur = n.page === current ? ' aria-current="page"' : '';
-    const c = n.count && meta.counts ? `<span class="count">${meta.counts[n.count]}</span>` : '';
-    return `<a href="${n.href}"${cur}>${esc(n.label)}${c}</a>`;
-  }).join('')}</nav>`;
-}
+// ---------- 顶栏 / 页脚 ----------
 
-/** 稿纸抬头的字段行：字段名是印好的，值是真数据 */
-function renderFields(meta) {
-  const f = [
-    ['站点', meta.site.site_title || 'todoo'],
-    ['游戏作品', `${meta.counts.works} 件`],
-    ['App', `${meta.counts.apps} 个`],
-    ['资讯', `${meta.counts.news} 条`],
-    ['最近更新', meta.updated ? day(meta.updated) : '—'],
-  ];
-  return `<div class="fields">${f.map(([k, v]) => (
-    `<div class="field"><div class="field-k">${esc(k)}</div><div class="field-v">${esc(v)}</div></div>`
-  )).join('')}</div>`;
-}
-
-function renderMasthead(meta, current) {
-  const host = $('#masthead');
+function renderTopbar(meta, current) {
+  const host = $('#topbar');
   if (!host) return;
-  const s = meta.site;
-  const body = current === 'home'
-    ? `<div class="sheet-body">
-         <h1 class="wordmark">${esc(s.site_title || 'todoo')}</h1>
-         <p class="tagline">${esc(s.site_tagline || '')}</p>
-         ${s.site_intro ? `<p class="intro">${esc(s.site_intro)}</p>` : ''}
-       </div>`
-    : '';
-  host.innerHTML = `<div class="sheet">${renderFields(meta)}${body}${renderNav(meta, current)}</div>`;
+  const title = meta.site.site_title || '紫夜堂';
+  // 主 CTA 指向内容最多的那一栏——没作品时让人点"作品"是空的
+  const best = ['works', 'apps', 'news']
+    .map((k) => ({ k, n: meta.counts[k] }))
+    .sort((a, b) => b.n - a.n)[0];
+  host.innerHTML = `
+    <div class="topbar">
+      <a class="logo" href="./"><span class="glyph" aria-hidden="true"></span>${esc(title)}</a>
+      <nav class="topnav" aria-label="站点导航">
+        ${NAV.map((n) => `<a href="${n.href}"${n.page === current ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`).join('')}
+      </nav>
+      <div class="cta">
+        ${best && best.n ? `<a class="pill solid" href="${listHref(best.k)}">看${esc(LABEL[best.k])}</a>` : ''}
+        ${meta.site.contact_email ? `<a class="pill" href="mailto:${esc(meta.site.contact_email)}">写邮件</a>` : ''}
+      </div>
+    </div>`;
 }
 
 function renderFoot(meta) {
   const host = $('#foot');
   if (!host) return;
   const s = meta.site;
-  const bits = [`<span>© ${new Date().getFullYear()} ${esc(s.site_title || 'todoo')}</span>`];
-  if (s.contact_email) {
-    bits.push(`<a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a>`);
-  }
+  const bits = [`<span>© ${new Date().getFullYear()} ${esc(s.site_title || '紫夜堂')}</span>`];
+  if (s.contact_email) bits.push(`<a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a>`);
   if (s.footer_note) bits.push(`<span>${esc(s.footer_note)}</span>`);
   // ICP 备案号：工信部要求在首页底部展示并链回备案查询系统，别删
   if (s.icp) {
@@ -111,13 +100,57 @@ function renderFoot(meta) {
   host.innerHTML = `<footer class="foot">${bits.join('')}</footer>`;
 }
 
+// ---------- 首屏 ----------
+
+function renderHero(meta) {
+  const s = meta.site;
+  const title = s.site_title || '紫夜堂';
+  const hasArt = !!s.hero_image_id;
+
+  // 三个模块入口。参考站那几个飘着的 pill 是纯装饰，这里换成带真实计数的入口——
+  // 结构要编码信息。没有内容的栏目不出现，免得点进去是空的。
+  const entries = ['works', 'apps', 'news']
+    .filter((k) => meta.counts[k] > 0)
+    .map((k, i) => `<a class="pill p${i + 1}" href="${listHref(k)}">${esc(LABEL[k])}<span class="n">${meta.counts[k]}</span></a>`);
+
+  const tags = String(s.hero_tags || '').split(/[,，]/).map((t) => t.trim()).filter(Boolean);
+
+  const card = s.author_note ? `
+    <div class="card-me">
+      ${s.author_avatar_id ? `<img src="${imgUrl(s.author_avatar_id)}" alt="${esc(title)}">` : ''}
+      <p><strong>${esc(title)}</strong>　${esc(s.author_note)}</p>
+    </div>` : '';
+
+  return `
+    <header class="hero">
+      <div class="hero-head">
+        <div class="mark tag">${esc(s.site_tagline || '')}</div>
+        <div class="mark">${esc(s.hero_since || '')}</div>
+      </div>
+
+      <div class="hero-stage">
+        <h1 class="wordmark" style="--n:${title.length}">${esc(title)}</h1>
+        ${hasArt ? `<img class="hero-art" src="${imgUrl(s.hero_image_id)}" alt="" aria-hidden="true">` : ''}
+        ${entries.length ? `<div class="hero-pills${hasArt ? '' : ' inline'}">${entries.join('')}</div>` : ''}
+      </div>
+
+      <div class="hero-foot">
+        <div>
+          ${s.site_intro ? `<p class="hero-claim">${esc(s.site_intro)}</p>` : ''}
+          ${tags.length ? `<div class="hero-tags">${tags.map((t) => `<span class="pill ghost">${esc(t)}</span>`).join('')}</div>` : ''}
+        </div>
+        ${card}
+      </div>
+    </header>`;
+}
+
 // ---------- 列表片段 ----------
 
 function cardWork(item, href) {
   const cover = item.cover_id
-    ? `<img class="card-cover" src="${coverUrl(item.cover_id)}" alt="${esc(item.title)}封面" loading="lazy">`
+    ? `<img class="card-cover" src="${imgUrl(item.cover_id)}" alt="${esc(item.title)}封面" loading="lazy">`
     : '';
-  const meta = [item.tag, shown(item)].filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('');
+  const meta = [item.tag, shown(item)].filter(Boolean).map((x) => `<span class="mark">${esc(x)}</span>`).join('');
   const link = item.link_url
     ? `<div class="card-foot"><a href="${esc(item.link_url)}" target="_blank" rel="noreferrer noopener">${esc(item.link_label || '查看')} →</a></div>`
     : '';
@@ -134,7 +167,7 @@ function cardWork(item, href) {
 
 function cardApp(item, href) {
   const icon = item.cover_id
-    ? `<img class="card-cover icon" src="${coverUrl(item.cover_id)}" alt="${esc(item.title)}图标" loading="lazy">`
+    ? `<img class="card-cover icon" src="${imgUrl(item.cover_id)}" alt="${esc(item.title)}图标" loading="lazy">`
     : '';
   const link = item.link_url
     ? `<div class="card-foot"><a href="${esc(item.link_url)}" target="_blank" rel="noreferrer noopener">${esc(item.link_label || '下载')} →</a></div>`
@@ -142,7 +175,7 @@ function cardApp(item, href) {
   return `<article class="card">
     ${icon}
     <div class="card-body">
-      ${item.tag ? `<div class="card-meta"><span>${esc(item.tag)}</span></div>` : ''}
+      ${item.tag ? `<div class="card-meta"><span class="mark">${esc(item.tag)}</span></div>` : ''}
       <h3 class="card-title"><a href="${href}">${esc(item.title)}</a></h3>
       ${item.subtitle ? `<p class="card-sub">${esc(item.subtitle)}</p>` : ''}
       ${item.summary ? `<p class="card-sub">${esc(item.summary)}</p>` : ''}
@@ -157,69 +190,51 @@ function rowNews(item, href) {
     <div class="row-title"><a href="${href}">${esc(item.title)}</a>
       ${item.summary ? `<span class="row-sub">${esc(item.summary)}</span>` : ''}
     </div>
-    ${item.tag ? `<div class="row-tag">${esc(item.tag)}</div>` : '<div></div>'}
+    ${item.tag ? `<span class="mark">${esc(item.tag)}</span>` : '<span></span>'}
   </div>`;
 }
 
-const DETAIL_PAGE = { works: 'work.html', apps: 'app.html', news: 'post.html' };
-const detailHref = (kind, id) => `${DETAIL_PAGE[kind]}?id=${encodeURIComponent(id)}`;
-
 function emptyBox(msg) { return `<p class="empty">${esc(msg)}</p>`; }
 
-function renderList(host, kind, items, emptyMsg) {
-  if (!items.length) { host.innerHTML = emptyBox(emptyMsg); return; }
-  if (kind === 'news') {
-    host.className = 'rows';
-    host.innerHTML = items.map((i) => rowNews(i, detailHref('news', i.id))).join('');
-    return;
-  }
-  host.className = kind === 'apps' ? 'grid' : 'grid wide';
+function listHtml(kind, items, emptyMsg) {
+  if (!items.length) return emptyBox(emptyMsg);
+  if (kind === 'news') return `<div class="rows">${items.map((i) => rowNews(i, detailHref('news', i.id))).join('')}</div>`;
   const card = kind === 'apps' ? cardApp : cardWork;
-  host.innerHTML = items.map((i) => card(i, detailHref(kind, i.id))).join('');
+  return `<div class="grid">${items.map((i) => card(i, detailHref(kind, i.id))).join('')}</div>`;
+}
+
+function sectionHtml(kind, items, opts) {
+  const o = opts || {};
+  return `<section class="section">
+    <div class="section-head">
+      <span class="mark">${MARK[kind]}</span>
+      <h2 class="section-title">${LABEL[kind]}</h2>
+      ${o.more ? `<a class="section-more" href="${listHref(kind)}">全部 →</a>`
+    : `<span class="section-more mark">${items.length} 条</span>`}
+    </div>
+    ${listHtml(kind, items, o.empty || `还没有发布${LABEL[kind]}。`)}
+  </section>`;
 }
 
 // ---------- 页面 ----------
 
-const LABEL = { works: '游戏作品', apps: 'App', news: '资讯' };
-const EYEBROW = { works: 'works', apps: 'apps', news: 'journal' };
-
-async function pageHome() {
+async function pageHome(meta) {
   const [works, apps, news] = await Promise.all([
     api('api/works?limit=6'), api('api/apps?limit=6'), api('api/news?limit=5'),
   ]);
   const sections = [
-    ['works', works.items, 'works.html', '还没有发布作品。到管理后台添加第一件。'],
-    ['apps', apps.items, 'apps.html', '还没有发布 App。'],
-    ['news', news.items, 'news.html', '还没有发布资讯。'],
+    ['works', works.items, '还没有发布作品。到管理后台添加第一件。'],
+    ['apps', apps.items, '还没有发布 App。'],
+    ['news', news.items, '还没有发布资讯。'],
   ];
-  $('#main').innerHTML = sections.map(([kind]) => `
-    <section class="section">
-      <div class="section-head">
-        <span class="eyebrow">${EYEBROW[kind]}</span>
-        <h2 class="section-title">${LABEL[kind]}</h2>
-        <a class="section-more" href="${kind}.html">全部 →</a>
-      </div>
-      <div id="list-${kind}"></div>
-    </section>`).join('');
-  for (const [kind, items, , msg] of sections) {
-    renderList($(`#list-${kind}`), kind, items, msg);
-  }
+  $('#main').innerHTML = renderHero(meta)
+    + sections.map(([kind, items, empty]) => sectionHtml(kind, items, { more: true, empty })).join('');
 }
 
 async function pageList(kind) {
   const { items } = await api(`api/${kind}?limit=200`);
-  // 页面骨架只有 #main（见 works.html 等），列表容器得自己建——
-  // 直接 $('#list') 会拿到 null，然后死在 innerHTML 上。
-  $('#main').innerHTML = `
-    <section class="section">
-      <div class="section-head">
-        <span class="eyebrow">${EYEBROW[kind]}</span>
-        <h2 class="section-title">${LABEL[kind]}</h2>
-        <span class="section-more">${items.length} 条</span>
-      </div>
-      <div id="list"></div>
-    </section>`;
-  renderList($('#list'), kind, items, `还没有发布${LABEL[kind]}。`);
+  // 页面骨架里只有 #main，栏目容器得自己建——曾经直接取 #list，拿到 null 后整页白屏
+  $('#main').innerHTML = sectionHtml(kind, items);
 }
 
 async function pageDetail(kind) {
@@ -230,16 +245,16 @@ async function pageDetail(kind) {
   const { item, shots, prev, next } = await api(`api/${kind}/item?id=${encodeURIComponent(id)}`);
   document.title = `${item.title} · ${LABEL[kind]}`;
 
-  const metaLine = [item.tag, shown(item)].filter(Boolean).map((x) => `<span>${esc(x)}</span>`).join('');
+  const metaLine = [item.tag, shown(item)].filter(Boolean).map((x) => `<span class="mark">${esc(x)}</span>`).join('');
   const cover = item.cover_id
-    ? `<img class="entry-cover" src="${coverUrl(item.cover_id)}" alt="${esc(item.title)}" />`
+    ? `<img class="entry-cover" src="${imgUrl(item.cover_id)}" alt="${esc(item.title)}">`
     : '';
   const action = item.link_url
-    ? `<p><a class="btn" href="${esc(item.link_url)}" target="_blank" rel="noreferrer noopener">${esc(item.link_label || '前往')}</a></p>`
+    ? `<p style="margin-top:var(--gap)"><a class="pill solid" href="${esc(item.link_url)}" target="_blank" rel="noreferrer noopener">${esc(item.link_label || '前往')} →</a></p>`
     : '';
   const gallery = shots.length
     ? `<div class="shots">${shots.map((s) => `<figure class="shot">
-         <img src="${coverUrl(s.image_id)}" alt="${esc(s.caption || item.title + '截图')}" loading="lazy">
+         <img src="${imgUrl(s.image_id)}" alt="${esc(s.caption || item.title + '截图')}" loading="lazy">
          ${s.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ''}
        </figure>`).join('')}</div>`
     : '';
@@ -249,8 +264,8 @@ async function pageDetail(kind) {
 
   host.innerHTML = `<article class="entry">
     <div class="section-head">
-      <span class="eyebrow">${EYEBROW[kind]}</span>
-      <a class="section-more" href="${kind}.html">全部${LABEL[kind]} →</a>
+      <span class="mark">${MARK[kind]}</span>
+      <a class="section-more" href="${listHref(kind)}">全部${LABEL[kind]} →</a>
     </div>
     ${metaLine ? `<div class="card-meta">${metaLine}</div>` : ''}
     <h1 class="entry-title">${esc(item.title)}</h1>
@@ -268,18 +283,18 @@ async function pageAbout(meta) {
   const rows = [];
   if (s.contact_email) rows.push(['邮箱', `<a href="mailto:${esc(s.contact_email)}">${esc(s.contact_email)}</a>`]);
   if (s.contact_note) rows.push(['其他', esc(s.contact_note)]);
-  if (s.icp) rows.push(['ICP 备案', `<span class="row-date">${esc(s.icp)}</span>`]);
+  if (s.icp) rows.push(['ICP 备案', esc(s.icp)]);
 
   $('#main').innerHTML = `<section class="section">
     <div class="section-head">
-      <span class="eyebrow">about</span>
+      <span class="mark">about</span>
       <h2 class="section-title">关于与联系</h2>
     </div>
     <div class="prose">${paragraphs(s.about_body) || emptyBox('还没写关于页的内容。')}</div>
-    ${rows.length ? `<div class="rows" style="margin-top:var(--cell)">${rows.map(([k, v]) => (
-      `<div class="row"><div class="row-date">${esc(k)}</div><div class="row-title">${v}</div><div></div></div>`
-    )).join('')}</div>` : ''}
-    <p class="empty" style="margin-top:var(--cell)">本站只做展示，不开放评论与留言。有事发邮件。</p>
+    ${rows.length ? `<div class="rows" style="margin-top:var(--gap)">${rows.map(([k, v]) => (
+    `<div class="row"><div class="row-date">${esc(k)}</div><div class="row-title">${v}</div><span></span></div>`
+  )).join('')}</div>` : ''}
+    <p class="empty" style="margin-top:var(--gap)">本站只做展示，不开放评论与留言。有事发邮件。</p>
   </section>`;
 }
 
@@ -290,15 +305,14 @@ async function pageAbout(meta) {
   try {
     const meta = await api('api/site');
     const navKey = { work: 'works', app: 'apps', post: 'news' }[page] || page;
-    renderMasthead(meta, navKey);
+    renderTopbar(meta, navKey);
     renderFoot(meta);
-    if (meta.site.site_title) {
-      document.title = page === 'home'
-        ? `${meta.site.site_title} · ${meta.site.site_tagline || ''}`.trim()
-        : document.title.replace('todoo', meta.site.site_title);
-    }
+    const title = meta.site.site_title || '紫夜堂';
+    document.title = page === 'home'
+      ? `${title} · ${meta.site.site_tagline || ''}`.trim()
+      : `${LABEL[navKey] || '关于'} · ${title}`;
 
-    if (page === 'home') await pageHome();
+    if (page === 'home') await pageHome(meta);
     else if (page === 'about') await pageAbout(meta);
     else if (['works', 'apps', 'news'].includes(page)) await pageList(page);
     else if (page === 'work') await pageDetail('works');

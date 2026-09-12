@@ -92,13 +92,15 @@ function flash(msg, bad) {
 // 本站的正式对外地址，启动时向**本地**实例要（/api/site 的 canonical）。
 // 不硬编码域名：换域名时只改 project.json，这里跟着变。
 let CLOUD_URL = '';
+// 站点名也从 /api/site 拿：它是数据（后台可改），写死在标题里迟早对不上
+let SITE_TITLE = '管理后台';
 
 // ---------- 登录 ----------
 function renderLogin(msg) {
   const cloudHost = CLOUD_URL ? targetHostOf(CLOUD_URL) : '';
   document.body.innerHTML = `
     <div class="login">
-      <h1>官网管理后台</h1>
+      <h1>${esc(SITE_TITLE)} 管理后台</h1>
       <label><span class="lab">管理目标</span>
         <select id="target">
           <option value="">本地 · ${esc(location.host || '127.0.0.1')}</option>
@@ -162,7 +164,7 @@ function renderShell() {
   document.body.innerHTML = `
     <div class="wrap">
       <div class="top">
-        <h1>官网管理后台</h1>
+        <h1>${esc(SITE_TITLE)} 管理后台</h1>
         <span class="env ${isLive() ? 'live' : 'local'}">${targetLabel()}</span>
         <span class="who">${esc(targetHost())}</span>
         <div class="right">
@@ -458,11 +460,16 @@ async function viewImages() {
 
 // ---------- 站点设置 ----------
 const SETTING_FIELDS = [
-  ['site_title', '站点名', '显示在首页大标题、页脚与浏览器标签上', 'text'],
-  ['site_tagline', '一句话简介', '首页大标题下面那行', 'text'],
-  ['site_intro', '首页引言', '再补一小段，留空则不显示', 'area'],
+  ['site_title', '站点名', '首屏那行巨字就是它。字号按字数自动缩放，改成几个字都不会溢出', 'text'],
+  ['site_tagline', '一句话简介', '巨字上方左侧那行小字', 'text'],
+  ['hero_since', '巨字上方右侧小字', '如 SINCE 2026，留空则不显示', 'text'],
+  ['hero_image_id', '首屏主视觉图', '叠在巨字上做图层穿插。**留空则首屏自动退化成纯排版**，不会开天窗', 'image'],
+  ['hero_tags', '首屏标签', '逗号分隔，如：独立游戏,小工具,一个人做', 'text'],
+  ['site_intro', '首屏宣言', '巨字下面那段话，留空则不显示', 'area'],
+  ['author_note', '名片一句话', '首屏右下那张卡片。**留空则整张卡不出现**', 'area'],
+  ['author_avatar_id', '名片头像', '留空则名片只显示文字', 'image'],
   ['about_body', '关于页正文', '空一行分段', 'area-tall'],
-  ['contact_email', '联系邮箱', '显示在页脚与关于页，留空则不显示', 'text'],
+  ['contact_email', '联系邮箱', '显示在顶栏、页脚与关于页，留空则不显示', 'text'],
   ['contact_note', '其他联系方式', '比如某个平台的主页，留空则不显示', 'text'],
   ['icp', 'ICP 备案号', '法定展示项，页脚会带上并链到工信部查询页。别留空', 'text'],
   ['footer_note', '页脚补充', '可留空', 'text'],
@@ -470,6 +477,8 @@ const SETTING_FIELDS = [
 
 async function viewSettings() {
   const { site } = await call('GET', 'api/admin/settings');
+  // image 类字段要从图库里挑，所以得先把图库拿来
+  const { images } = await call('GET', 'api/admin/images?limit=500');
   $('#view').innerHTML = `
     <div class="panel-head">
       <h2>站点设置</h2>
@@ -477,6 +486,23 @@ async function viewSettings() {
     </div>
     <form class="form" id="sform">
       ${SETTING_FIELDS.map(([name, label, help, type]) => {
+    if (type === 'image') {
+      const cur = Number(site[name]) || 0;
+      return `<label>
+          <span class="lab">${label}</span>
+          <div class="cover-pick">
+            <img class="preview" data-for="${name}" src="${cur ? imgUrl(cur) : ''}"
+                 alt="" style="${cur ? '' : 'visibility:hidden'}">
+            <div style="flex:1">
+              <select name="${name}" data-preview="${name}">
+                <option value="">（不设）</option>
+                ${images.map((im) => `<option value="${im.id}"${cur === im.id ? ' selected' : ''}>#${im.id} · ${esc(im.alt || im.mime)} · ${kb(im.size)}</option>`).join('')}
+              </select>
+              <span class="help">${help}　图片先在「图库」里传。</span>
+            </div>
+          </div>
+        </label>`;
+    }
     const inner = type === 'text'
       ? `<input type="text" name="${name}" value="${esc(site[name])}">`
       : `<textarea name="${name}" class="${type === 'area-tall' ? 'tall' : ''}">${esc(site[name])}</textarea>`;
@@ -488,12 +514,21 @@ async function viewSettings() {
       <div class="actions"><button type="submit" class="primary">保存设置</button></div>
     </form>`;
 
+  $('#sform').addEventListener('change', (e) => {
+    const name = e.target.dataset && e.target.dataset.preview;
+    if (!name) return;
+    const img = $(`.preview[data-for="${name}"]`);
+    if (!img) return;
+    img.src = e.target.value ? imgUrl(e.target.value) : '';
+    img.style.visibility = e.target.value ? 'visible' : 'hidden';
+  });
+
   $('#sform').addEventListener('submit', async (e) => {
     e.preventDefault();
     const p = Object.fromEntries(new FormData(e.target).entries());
     try {
       await call('POST', 'api/admin/settings', p);
-      flash('设置已保存');
+      flash('设置已保存，前台刷新即生效');
     } catch (err) { flash(err.message, true); }
   });
 }
@@ -504,7 +539,9 @@ async function viewSettings() {
   // 取不到也不致命，只是登录页只剩本地可选。
   try {
     const r = await fetch('api/site', { headers: { Accept: 'application/json' } });
-    CLOUD_URL = ((await r.json()) || {}).canonical || '';
+    const d = (await r.json()) || {};
+    CLOUD_URL = d.canonical || '';
+    SITE_TITLE = (d.site && d.site.site_title) || SITE_TITLE;
   } catch (_) { CLOUD_URL = ''; }
 
   if (!atoken) { renderLogin(); return; }

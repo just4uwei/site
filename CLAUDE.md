@@ -3,8 +3,11 @@
 本文件是本仓库的项目说明，每次会话自动加载。详细内容见 `doc/`，本文件只做索引与最关键的事实。
 
 ## 项目简介
-「官网」（内部标识 `site`）—— todoo.top 的对外站点：展示个人游戏作品、介绍自己做的 App、
-发布产品资讯，外加一个改这些内容的管理后台。
+「官网」（内部标识 `site`，对外站名**紫夜堂**）—— todoo.top 的对外站点：
+展示个人游戏作品、介绍自己做的 App、发布产品资讯，外加一个改这些内容的管理后台。
+
+站名不写死在代码里，存在 `settings` 表的 `site_title` 键（默认「紫夜堂」），
+后台可改；页面标题、页脚、首屏巨字全取它。
 
 **访客只读**：站点没有评论、留言、投稿、点赞这类用户产出内容的功能，也没有对应的接口。
 这是产品决定，不是还没做——详见 [doc/需求文档.md](doc/需求文档.md) 第 6 节。
@@ -52,9 +55,11 @@ src/
     content.js  works/apps/news 三个**同构**模块 + 截图（一套 SQL 通吃）
     settings.js 站点设置 key/value（DEFAULTS 就是键白名单）
     images.js   图片元数据进库、字节落盘 /var/lib/site/images/<id>
-public/         站点静态文件：8 个前台页 + admin.html + assets/
+public/         公开站点静态文件：8 个前台页 + assets/（**进部署包**）
+console/        管理后台页面 admin.html + assets/（**不进部署包**，线上没有这个目录）
 seed.js         往**本地**库塞示例内容，方便看效果（不进部署包）
 selftest.js     零依赖端到端自检，同时是回归网与活文档
+selftest-pages.js  页面冒烟：headless 浏览器真开一遍每个页面，看渲染结果（不进部署包）
 deploy/         pack.sh（打包）/ server-setup.sh（一键部署）/ README.md
 doc/            需求/架构/接口/开发 文档
 ```
@@ -64,9 +69,13 @@ doc/            需求/架构/接口/开发 文档
 npm start            # 本地起服务（8083），浏览 http://127.0.0.1:8083/
 npm run dev          # 同上，带 --watch
 npm run seed         # 塞示例内容（只动本地 data/，已有内容就不覆盖）
-npm run selftest     # 自检，改业务后必跑；它是重构时的保命网
+npm run selftest     # 服务端自检，改业务后必跑；它是重构时的保命网
+npm run selftest:pages  # 页面冒烟，改前端后必跑（没装 Edge/Chrome 会自动跳过）
 bash deploy/pack.sh  # 打包（产出 deploy/site-server.tar.gz，绝不含数据目录）
 ```
+
+管理后台在 `http://127.0.0.1:8083/admin.html`，**只在本地开得出来**。
+要管线上内容，在登录页把「管理目标」切到云端地址，请求跨域直打线上 `/api/admin/*`。
 
 发布走平台，不在本仓做：`cd ../platform && bash bin/deploy.sh site`。
 
@@ -84,11 +93,31 @@ bash deploy/pack.sh  # 打包（产出 deploy/site-server.tar.gz，绝不含数�
 - `server.js` 只装配不写业务；它超过 100 行说明有东西该下沉到 `src/`。
 
 ## 前端设计约定
-整站是一张**方格稿纸**：桌面 → 稿纸（方格印在它上面）→ 压在纸上的白块，三层。
-正文一律落在白块里，格线不穿过字。无圆角、无阴影，只有 1px 墨线。
-字体全走系统栈——**Google Fonts 在大陆取不到，不许把站点挂在它上面**；
-拉丁字面排在中文字面前面，否则 Windows 上 SimSun 会把拉丁字也画了，又细又假。
-色与字的 token 全在 `public/assets/site.css` 顶部，改配色只改那里。
+站名叫**紫夜堂**，视觉照名字走：近黑的夜蓝紫底（`--void #0d0a16`）、
+冷白正文（`--chalk #f2efff`）、亮紫强调（`--violet #8b5cf6`）。
+排版语言是「巨字 + 小号大写宽字距眉标 + 药丸 + 主视觉与巨字图层穿插」。
+色与字的 token 全在 `public/assets/site.css` 顶部，改配色只改那里——
+但 `src/http/routes/static.js` 里的 404 页引不了 CSS，那几个色值是手工对齐的副本，
+改配色记得回去同步。
+
+五条别踩的：
+
+- **字体全走系统栈**。Google Fonts 在大陆取不到，不许把站点挂在它上面。
+- **中文没有压缩黑体，别去伪造**。参考设计的张力来自极窄的 compressed sans，
+  系统中文字体里没有对应物；巨字的气势改由字号 + 字重 + 负字距给。
+  Windows 上中文最粗只到雅黑 Bold(700)，所以巨字统一 `font-weight:700`——
+  写 900 只会触发难看的合成加粗。
+- **巨字字号按字数算**：`--n` 由 `site.js` 按标题长度注入，CSS 里
+  `clamp(2.5rem, calc(90vw / var(--n,3)), 26rem)`。写死 vw 值的话，
+  站名从三个字改成四个字就直接溢出屏幕。
+- **首屏主视觉与名片都可以没有**。`hero_image_id` 留空时首屏退化成纯排版，
+  药丸入口改走 `.hero-pills.inline` 排在巨字下方——压在白色巨字上会糊成一片；
+  `author_note` 留空时整张名片不出现。设置项默认就是空的，别假设它们有值。
+- **首屏药丸不是装饰**，是带真实计数、可点的栏目入口，没内容的栏目不出现。
+  结构要编码信息，不然就是好看的噪音。
+
+前端改完跑 `npm run selftest:pages`。服务端自检 100 项全绿也照样漏过整页白屏
+（列表页往一个不存在的容器写 `innerHTML`），页面冒烟就是为这个补的。
 
 ## 部署（详见 [deploy/README.md](deploy/README.md)）
 - 发布：在平台仓 `bash bin/deploy.sh site`
@@ -97,6 +126,9 @@ bash deploy/pack.sh  # 打包（产出 deploy/site-server.tar.gz，绝不含数�
 
 ## 安全约束（必守）
 - 管理密码只存 scrypt 哈希到 `/etc/site/site.env`，**明文绝不落盘、绝不入库、绝不写进文档或记忆**
+- **线上不留管理后台页面**：`console/` 不进部署包，线上访问 `/admin.html` 必须 404。
+  接口（`/api/admin/*`）仍留在线上，否则本地管理台无从连接——去掉的是页面，不是 API。
+  `deploy/pack.sh` 的 ITEMS 别把 `console/` 加回去，`selftest.js` 有断言盯着。
 - 图片上传按 Content-Type 过白名单（png/jpeg/webp/gif/svg），单张 8M 封顶——站点不是文件托管
 - `*.pem` 私钥勿泄露、勿入库
 - 打包清单绝不含数据目录；部署脚本绝不删改 `/var/lib/site`

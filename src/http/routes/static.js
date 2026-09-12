@@ -88,15 +88,18 @@ async function handle(req, res, url) {
   if (!found) {
     res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
     // 404 不走 public/：静态文件都找不着的时候，别再指望 public/ 里有东西。
-    // 配色与 site.css 的 token 手工对齐（纸 #eef1ea / 墨 #16202b / 玉 #1f5f52）。
-    return res.end('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>404 · 没有这个地址</title>'
+    // 配色与 site.css 的 token 手工对齐（夜 #0d0a16 / 冷白 #f2efff / 紫 #8b5cf6）——
+    // 这里引不了 CSS 文件，所以改前台配色时记得回来同步这几个值。
+    return res.end('<!doctype html><html lang="zh-CN"><meta charset="utf-8">'
+      + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+      + '<meta name="color-scheme" content="dark"><title>404 · 没有这个地址</title>'
       + '<body style="margin:0;font:16px/1.75 \'PingFang SC\',\'Microsoft YaHei\',system-ui,sans-serif;'
-      + 'background:#eef1ea;color:#16202b;padding:14vh 8vw">'
-      + '<p style="font:400 11px/1 ui-monospace,Consolas,monospace;letter-spacing:.16em;color:#1f5f52">404</p>'
-      + '<h1 style="font:700 clamp(1.8rem,5vw,2.8rem)/1.2 \'Songti SC\',SimSun,Georgia,serif;margin:.3rem 0 0">'
-      + '这个地址没有内容</h1>'
-      + '<p style="color:#5d6b66">可能是链接写错了，或者那条内容还没发布。</p>'
-      + '<p><a href="./" style="color:#1f5f52">回首页 →</a></p>');
+      + 'background:#0d0a16;color:#f2efff;padding:16vh 8vw">'
+      + '<p style="font:500 11px/1 ui-monospace,Consolas,monospace;letter-spacing:.18em;color:#8b5cf6">404</p>'
+      + '<h1 style="font-weight:700;font-size:clamp(2rem,6vw,3.5rem);line-height:1.05;'
+      + 'letter-spacing:-.03em;margin:.5rem 0 0">这个地址没有内容</h1>'
+      + '<p style="color:#8a82a6">可能是链接写错了，或者那条内容还没发布。</p>'
+      + '<p><a href="./" style="color:#8b5cf6;text-decoration:none">回首页 →</a></p>');
   }
 
   const { abs, st } = found;
