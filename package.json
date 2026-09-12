@@ -10,6 +10,7 @@
     "start": "node --experimental-sqlite server.js",
     "dev": "node --watch --experimental-sqlite server.js",
     "selftest": "node --experimental-sqlite selftest.js",
-    "seed": "node --experimental-sqlite seed.js"
+    "seed": "node --experimental-sqlite seed.js",
+    "selftest:pages": "node --experimental-sqlite selftest-pages.js"
   }
 }

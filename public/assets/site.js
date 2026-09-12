@@ -208,6 +208,17 @@ async function pageHome() {
 
 async function pageList(kind) {
   const { items } = await api(`api/${kind}?limit=200`);
+  // 页面骨架只有 #main（见 works.html 等），列表容器得自己建——
+  // 直接 $('#list') 会拿到 null，然后死在 innerHTML 上。
+  $('#main').innerHTML = `
+    <section class="section">
+      <div class="section-head">
+        <span class="eyebrow">${EYEBROW[kind]}</span>
+        <h2 class="section-title">${LABEL[kind]}</h2>
+        <span class="section-more">${items.length} 条</span>
+      </div>
+      <div id="list"></div>
+    </section>`;
   renderList($('#list'), kind, items, `还没有发布${LABEL[kind]}。`);
 }
 

@@ -87,6 +87,8 @@ const PNG = Buffer.from(
   expect(!!j(r.body).site.icp, '站点设置带 ICP 备案号（法定展示项，默认值不能空）');
   expect(j(r.body).counts.works === 0, '初始已发布作品数 0');
   expect(j(r.body).updated === 0, '没有已发布内容时 updated=0');
+  expect(j(r.body).canonical === 'https://todoo.top/',
+    '/api/site 带正式对外地址（本地管理台靠它列出"线上"目标，不硬编码域名）');
 
   // ---- 前台只读是硬约束 ----
   for (const p of ['/api/works', '/api/apps', '/api/news', '/api/site']) {
@@ -223,7 +225,14 @@ const PNG = Buffer.from(
   r = await req('GET', '/works');
   expect(r.status === 200, '干净地址 /works -> works.html');
   r = await req('GET', '/admin.html');
-  expect(r.status === 200, '/admin.html -> 200');
+  expect(r.status === 200, '/admin.html -> 200（本地由 console/ 出）');
+
+  // 管理台**不进部署包**：线上没有这个页面，扫描器就扫不到登录框。
+  // 这两条是静态检查，防止以后有人顺手把 console 加进清单、或把 public 去掉。
+  const packSh = fs.readFileSync(path.join(__dirname, 'deploy', 'pack.sh'), 'utf8');
+  const items = /ITEMS="([^"]*)"/.exec(packSh)[1].trim().split(/\s+/);
+  expect(!items.includes('console'), '打包清单不含 console/（线上不留管理后台页面）');
+  expect(items.includes('public'), '打包清单含 public/（公开站点必须上线）');
 
   for (const p of ['/../project.json', '/assets/../../project.json', '/%2e%2e/project.json']) {
     r = await req('GET', p);

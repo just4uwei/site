@@ -10,9 +10,17 @@
 
 const { sendJson } = require('../respond');
 const store = require('../../store');
-const { NAME, VERSION } = require('../../config');
+const { NAME, VERSION, project } = require('../../config');
 
 const prefix = '/api';
+
+// 本站的正式对外地址，由 project.json 的 gateway 段推出来（占根时不带前缀）。
+// 用处有二：前台可以拿它做 canonical；本地管理台拿它当"线上目标"的候选，
+// 于是切到云端时不用手敲域名，也不用在前端硬编码一个会过期的字面量。
+const g = project.gateway || {};
+const CANONICAL = g.host
+  ? `${g.scheme || 'https'}://${g.host}${g.root ? '' : (g.prefix || '')}/`
+  : '';
 
 // 三个内容模块的前台路径 -> 数据层 kind。顺带当白名单用。
 const KIND_BY_PATH = { works: 'works', apps: 'apps', news: 'news' };
@@ -37,6 +45,7 @@ async function handle(req, res, url) {
         news: store.content.countPublished('news'),
       },
       updated: store.content.latestUpdate(),
+      canonical: CANONICAL,
       name: NAME,
       version: VERSION,
     });

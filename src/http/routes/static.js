@@ -1,4 +1,13 @@
-// routes/static.js - 静态站点文件（public/ 下的 html / css / js / 图标）。
+// routes/static.js - 静态站点文件。
+//
+// 两个根，按顺序找：
+//   public/    公开站点，**进部署包**，线上就是它
+//   console/   管理台页面，**不进部署包**（见 deploy/pack.sh 的 ITEMS）
+//
+// 为什么管理台不上线：线上没有 /admin.html 这个页面，扫描器就扫不到登录框。
+// 管理台只在本地起（bash bin/console.sh 或 npm run dev），要管线上内容时在
+// 登录页把"管理目标"切到云端地址，请求直接跨域打线上 /api/admin/*（CORS 已放开）。
+// 注意：**接口必须留在线上**，否则本地管理台无从连接——去掉的是页面，不是 API。
 //
 // 挂在 ROUTES 最后，prefix 是空串 -> 兜住所有没被 API 认领的路径。
 // /api/ 开头的一律交还 router（让它回 JSON 404），不会被当成文件找。
@@ -18,6 +27,10 @@ const { ROOT } = require('../../config');
 
 const prefix = '';
 const PUBLIC_DIR = path.join(ROOT, 'public');
+const CONSOLE_DIR = path.join(ROOT, 'console');
+// 线上只有 public/；console/ 不在部署包里，所以那边这个目录压根不存在，
+// 访问 /admin.html 会自然落到 404，不需要额外开关。
+const ROOTS = [PUBLIC_DIR, CONSOLE_DIR];
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -50,14 +63,16 @@ function resolveFile(pathname) {
     : [rel + '.html', path.join(rel, 'index.html')];
 
   for (const c of candidates) {
-    const abs = path.resolve(PUBLIC_DIR, c);
-    // 穿越检查：解析后必须还在 public/ 里
-    if (abs !== PUBLIC_DIR && !abs.startsWith(PUBLIC_DIR + path.sep)) continue;
-    if (!Object.prototype.hasOwnProperty.call(MIME, path.extname(abs).toLowerCase())) continue;
-    try {
-      const st = fs.statSync(abs);
-      if (st.isFile()) return { abs, st };
-    } catch (_) { /* 下一个候选 */ }
+    for (const root of ROOTS) {
+      const abs = path.resolve(root, c);
+      // 穿越检查：解析后必须还在**这个** root 里（每个 root 各判各的）
+      if (abs !== root && !abs.startsWith(root + path.sep)) continue;
+      if (!Object.prototype.hasOwnProperty.call(MIME, path.extname(abs).toLowerCase())) continue;
+      try {
+        const st = fs.statSync(abs);
+        if (st.isFile()) return { abs, st };
+      } catch (_) { /* 下一个 root / 下一个候选 */ }
+    }
   }
   return null;
 }
@@ -109,4 +124,4 @@ async function handle(req, res, url) {
   return res.end(buf);
 }
 
-module.exports = { prefix, handle, PUBLIC_DIR };
+module.exports = { prefix, handle, PUBLIC_DIR, CONSOLE_DIR };

@@ -1,24 +1,37 @@
 // admin.js - 管理后台。登录、三个内容模块的增删改、图库、站点设置。
 //
-// 地址规则同前台：**一律相对路径**。后台同时能从
-//   https://todoo.top/admin.html  和  https://todoo.top/site/admin.html  打开。
+// **这个页面只在本地跑**：它在 console/ 下，而 deploy/pack.sh 的清单里没有 console/，
+// 所以线上 /admin.html 是 404——扫描器扫不到登录框。但 /api/admin/* 接口仍然在线上，
+// 否则本地管理台就没东西可连了。
+//
+// 于是登录时要先选**管理目标**：
+//   本地（API_BASE 为空，走相对路径）    改的是 site/data/ 里那份开发数据，密码默认 admin
+//   线上（API_BASE = https://todoo.top）  跨域直打线上接口，改的是公开内容，密码是部署时设的
+// 跨域能成是因为 respond.js 的 cors() 放开了 Origin，且 OPTIONS 预检回 204。
 //
 // atoken 存 sessionStorage：服务端本来就是内存态 token（进程重启即失效），
 // 存 localStorage 只会让人拿着一个早就失效的串反复困惑。
+// 目标地址不是机密，存 localStorage，省得每次重选。
 'use strict';
 
 const $ = (s, r) => (r || document).querySelector(s);
 const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 
 const TOKEN_KEY = 'site-atoken';
+const BASE_KEY = 'site-admin-base';
 let atoken = sessionStorage.getItem(TOKEN_KEY) || '';
+// '' = 本地（相对路径）；否则是云端来源，如 https://todoo.top
+let API_BASE = localStorage.getItem(BASE_KEY) || '';
 
-// 本地实例和线上实例长得一模一样，但它们是**两套独立的库和密码**：
-//   本地 http://127.0.0.1:8083  数据在 ./data/，没有 ADMIN_PASSWORD_HASH 就回落明文 admin
-//   线上 https://todoo.top      数据在 /var/lib/site，密码是部署时设的哈希
-// 不标出来就会拿线上密码登本地（"密码错误"），或者更糟——以为在本地试，其实在改生产内容。
-const IS_LOCAL = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
-const ENV_LABEL = IS_LOCAL ? '本地' : '线上';
+/** 把无前缀路径拼成实际请求地址。API_BASE 为空时保持相对路径 */
+function apiUrl(p) {
+  return API_BASE ? `${API_BASE.replace(/\/+$/, '')}/${p.replace(/^\/+/, '')}` : p;
+}
+
+const isLive = () => !!API_BASE;
+const targetLabel = () => (API_BASE ? '线上' : '本地');
+const targetHostOf = (u) => { try { return new URL(u).host; } catch (_) { return u; } };
+const targetHost = () => (API_BASE ? targetHostOf(API_BASE) : (location.host || '本地'));
 
 const KINDS = [
   { key: 'works', label: '游戏作品', coverLabel: '封面', linkLabelHint: '下载 / 试玩' },
@@ -39,7 +52,7 @@ function day(ms) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 const kb = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)}M` : `${Math.max(1, Math.round(n / 1024))}K`);
-const imgUrl = (id) => `api/image?id=${encodeURIComponent(id)}`;
+const imgUrl = (id) => apiUrl(`api/image?id=${encodeURIComponent(id)}`);
 
 /** 带鉴权的请求。401 一律踢回登录页——token 失效就别在页面上装作还在线 */
 async function call(method, path, body, rawContentType) {
@@ -53,7 +66,7 @@ async function call(method, path, body, rawContentType) {
     headers['Content-Type'] = 'application/json';
     payload = JSON.stringify(body);
   }
-  const res = await fetch(path, { method, headers, body: payload });
+  const res = await fetch(apiUrl(path), { method, headers, body: payload });
   const text = await res.text();
   let data = {};
   try { data = text ? JSON.parse(text) : {}; } catch (_) { /* 非 JSON */ }
@@ -65,7 +78,7 @@ async function call(method, path, body, rawContentType) {
 function signOut(msg) {
   atoken = '';
   sessionStorage.removeItem(TOKEN_KEY);
-  renderLogin(msg);
+  renderLogin(msg);   // 目标（API_BASE）有意保留：下次多半还是管同一个
 }
 
 // ---------- 提示 ----------
@@ -76,14 +89,23 @@ function flash(msg, bad) {
   if (msg && !bad) setTimeout(() => { if ($('#flash')) $('#flash').innerHTML = ''; }, 3200);
 }
 
+// 本站的正式对外地址，启动时向**本地**实例要（/api/site 的 canonical）。
+// 不硬编码域名：换域名时只改 project.json，这里跟着变。
+let CLOUD_URL = '';
+
 // ---------- 登录 ----------
 function renderLogin(msg) {
+  const cloudHost = CLOUD_URL ? targetHostOf(CLOUD_URL) : '';
   document.body.innerHTML = `
     <div class="login">
-      <h1>官网管理后台 <span class="env ${IS_LOCAL ? 'local' : 'live'}">${ENV_LABEL}</span></h1>
-      <p>${IS_LOCAL
-    ? '这是本地实例，数据在 <code>site/data/</code>。没设 ADMIN_PASSWORD_HASH 时默认密码是 <code>admin</code>——线上密码在这里登不进去。'
-    : '这是线上实例，改动会直接影响 <code>todoo.top</code> 的公开内容。'}</p>
+      <h1>官网管理后台</h1>
+      <label><span class="lab">管理目标</span>
+        <select id="target">
+          <option value="">本地 · ${esc(location.host || '127.0.0.1')}</option>
+          ${CLOUD_URL ? `<option value="${esc(CLOUD_URL)}">线上 · ${esc(cloudHost)}</option>` : ''}
+        </select>
+      </label>
+      <p class="tnote" id="tnote"></p>
       <div id="loginFlash">${msg ? `<div class="note bad">${esc(msg)}</div>` : ''}</div>
       <label><span class="lab">密码</span>
         <input type="password" id="pw" autocomplete="current-password" autofocus>
@@ -91,11 +113,30 @@ function renderLogin(msg) {
       <button class="primary" id="go">登录</button>
       <p class="muted" style="margin-top:1rem"><a href="./">← 回站点首页</a></p>
     </div>`;
+
+  const sel = $('#target');
+  sel.value = API_BASE;
+  // 选中的不在选项里（比如换过域名），回落本地，免得拿着一个连不上的目标反复失败
+  if (sel.selectedIndex < 0) { sel.value = ''; API_BASE = ''; }
+  // 两个目标是两套独立的库和密码，说明必须随选择实时变，否则又会拿错密码
+  const paint = () => {
+    $('#tnote').innerHTML = sel.value
+      ? `<span class="env live">线上</span> 改动会直接出现在 <code>${esc(targetHostOf(sel.value))}</code>`
+        + ' 的公开页面上。密码是部署时设的那个。'
+      : '<span class="env local">本地</span> 只动 <code>site/data/</code> 里的开发数据。'
+        + ' 没设 ADMIN_PASSWORD_HASH 时密码是 <code>admin</code>。';
+  };
+  sel.addEventListener('change', paint);
+  paint();
+
   const submit = async () => {
     const pw = $('#pw').value;
+    // 先认目标再登录：登录请求本身就得打到对的那一端
+    API_BASE = sel.value;
+    localStorage.setItem(BASE_KEY, API_BASE);
     $('#go').disabled = true;
     try {
-      const r = await fetch('api/admin/login', {
+      const r = await fetch(apiUrl('api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pw }),
@@ -122,10 +163,10 @@ function renderShell() {
     <div class="wrap">
       <div class="top">
         <h1>官网管理后台</h1>
-        <span class="env ${IS_LOCAL ? 'local' : 'live'}">${ENV_LABEL}</span>
-        <span class="who">${esc(location.host || 'site')}</span>
+        <span class="env ${isLive() ? 'live' : 'local'}">${targetLabel()}</span>
+        <span class="who">${esc(targetHost())}</span>
         <div class="right">
-          <a class="btn" href="./" target="_blank" rel="noreferrer">看站点 ↗</a>
+          <a class="btn" href="${esc(API_BASE || './')}" target="_blank" rel="noreferrer">看站点 ↗</a>
           <button id="out">退出</button>
         </div>
       </div>
@@ -459,6 +500,13 @@ async function viewSettings() {
 
 // ---------- 启动 ----------
 (async function boot() {
+  // 向**本地**实例要正式对外地址（相对路径，一定打本地），用来列出"线上"这个目标。
+  // 取不到也不致命，只是登录页只剩本地可选。
+  try {
+    const r = await fetch('api/site', { headers: { Accept: 'application/json' } });
+    CLOUD_URL = ((await r.json()) || {}).canonical || '';
+  } catch (_) { CLOUD_URL = ''; }
+
   if (!atoken) { renderLogin(); return; }
   // 拿一个要鉴权的接口验票：过期就会被 call() 踢回登录页
   try {

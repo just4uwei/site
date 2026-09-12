@@ -42,7 +42,8 @@ a { color: var(--jade); }
 .top h1 { font-size: 1.0625rem; margin: 0; font-weight: 600; }
 .top .who { font: 400 .75rem/1 var(--f-mono); color: var(--dim); }
 
-/* 本地 / 线上标识：两个实例界面一样，不标出来就会拿错密码、或者在生产上误操作。
+/* 本地 / 线上标识：同一个管理台能管两端，而两端是独立的库和密码。
+   不标出来就会拿错密码，或者更糟——以为在本地试，其实在改生产内容。
    线上用印泥红——那是"你正在改公开内容"的警告，不是装饰。 */
 .env {
   display: inline-block;
@@ -150,6 +151,20 @@ input:focus, select:focus, textarea:focus { border-color: var(--jade); outline: 
 .note { border: 1px solid var(--jade); background: var(--jade-soft); color: var(--jade); padding: .55rem .75rem; font-size: .875rem; margin-bottom: .9rem; }
 .note.bad { border-color: var(--seal); background: #f7e7e3; color: var(--seal); }
 .muted { color: var(--dim); font-size: .875rem; }
+
+/* 目标说明：随下拉选择实时变，别让人对着一段固定文案猜自己在管哪一端 */
+.tnote {
+  margin: .6rem 0 1.1rem;
+  font-size: .8125rem;
+  line-height: 1.75;
+  color: var(--dim);
+}
+.tnote .env { margin-right: .35rem; }
+.login code {
+  font: 400 .8125rem/1 var(--f-mono);
+  background: var(--jade-soft);
+  padding: .15rem .3rem;
+}
 
 /* ---------- 登录 ---------- */
 .login { max-width: 22rem; margin: 12vh auto; border: 1px solid var(--ink); background: var(--paper-2); padding: 1.4rem 1.3rem 1.5rem; }
