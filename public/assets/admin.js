@@ -13,6 +13,13 @@ const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 const TOKEN_KEY = 'site-atoken';
 let atoken = sessionStorage.getItem(TOKEN_KEY) || '';
 
+// 本地实例和线上实例长得一模一样，但它们是**两套独立的库和密码**：
+//   本地 http://127.0.0.1:8083  数据在 ./data/，没有 ADMIN_PASSWORD_HASH 就回落明文 admin
+//   线上 https://todoo.top      数据在 /var/lib/site，密码是部署时设的哈希
+// 不标出来就会拿线上密码登本地（"密码错误"），或者更糟——以为在本地试，其实在改生产内容。
+const IS_LOCAL = ['localhost', '127.0.0.1', '::1', ''].includes(location.hostname);
+const ENV_LABEL = IS_LOCAL ? '本地' : '线上';
+
 const KINDS = [
   { key: 'works', label: '游戏作品', coverLabel: '封面', linkLabelHint: '下载 / 试玩' },
   { key: 'apps', label: 'App', coverLabel: '图标', linkLabelHint: '下载入口' },
@@ -73,8 +80,10 @@ function flash(msg, bad) {
 function renderLogin(msg) {
   document.body.innerHTML = `
     <div class="login">
-      <h1>官网管理后台</h1>
-      <p>输入管理密码继续。</p>
+      <h1>官网管理后台 <span class="env ${IS_LOCAL ? 'local' : 'live'}">${ENV_LABEL}</span></h1>
+      <p>${IS_LOCAL
+    ? '这是本地实例，数据在 <code>site/data/</code>。没设 ADMIN_PASSWORD_HASH 时默认密码是 <code>admin</code>——线上密码在这里登不进去。'
+    : '这是线上实例，改动会直接影响 <code>todoo.top</code> 的公开内容。'}</p>
       <div id="loginFlash">${msg ? `<div class="note bad">${esc(msg)}</div>` : ''}</div>
       <label><span class="lab">密码</span>
         <input type="password" id="pw" autocomplete="current-password" autofocus>
@@ -113,7 +122,8 @@ function renderShell() {
     <div class="wrap">
       <div class="top">
         <h1>官网管理后台</h1>
-        <span class="who">site</span>
+        <span class="env ${IS_LOCAL ? 'local' : 'live'}">${ENV_LABEL}</span>
+        <span class="who">${esc(location.host || 'site')}</span>
         <div class="right">
           <a class="btn" href="./" target="_blank" rel="noreferrer">看站点 ↗</a>
           <button id="out">退出</button>

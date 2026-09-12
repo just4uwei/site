@@ -215,8 +215,10 @@ const PNG = Buffer.from(
   r = await req('GET', '/assets/site.css');
   expect(r.status === 200 && r.headers['content-type'].startsWith('text/css'), '/assets/site.css -> 200 CSS');
   const cssEtag = r.headers.etag;
+  expect(r.headers['cache-control'] === 'no-cache',
+    '静态资源是 no-cache（每次回源校验，改完立刻生效；没有构建指纹就不能设 max-age）');
   r = await req('GET', '/assets/site.css', undefined, { ifNoneMatch: cssEtag });
-  expect(r.status === 304, '静态资源 ETag 命中 -> 304');
+  expect(r.status === 304, '静态资源 ETag 命中 -> 304（no-cache 不等于不缓存）');
 
   r = await req('GET', '/works');
   expect(r.status === 200, '干净地址 /works -> works.html');

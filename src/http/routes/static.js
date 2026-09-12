@@ -87,8 +87,10 @@ async function handle(req, res, url) {
   const { abs, st } = found;
   const ext = path.extname(abs).toLowerCase();
   const etag = `"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
-  // html 每次回源校验（发布后立刻生效）；其余资源短缓存 + ETag
-  const cache = ext === '.html' ? 'no-cache' : 'public, max-age=3600';
+  // 一律 no-cache + ETag：**no-cache 不是不缓存**，是"每次回源校验"，没改就回 304（几十字节）。
+  // 这里没有构建流程，文件名不带指纹，所以 max-age 一旦设上，改完 CSS/JS 就得等它过期或教人强刷——
+  // 发布后不能立刻生效的代价，远大于每次多一个 304 往返。图片走 /api/image 另有一年长缓存。
+  const cache = 'no-cache';
 
   if (req.headers['if-none-match'] === etag) {
     res.writeHead(304, { ETag: etag, 'Cache-Control': cache });

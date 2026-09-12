@@ -41,6 +41,25 @@ a { color: var(--jade); }
 }
 .top h1 { font-size: 1.0625rem; margin: 0; font-weight: 600; }
 .top .who { font: 400 .75rem/1 var(--f-mono); color: var(--dim); }
+
+/* 本地 / 线上标识：两个实例界面一样，不标出来就会拿错密码、或者在生产上误操作。
+   线上用印泥红——那是"你正在改公开内容"的警告，不是装饰。 */
+.env {
+  display: inline-block;
+  font: 500 .6875rem/1 var(--f-mono);
+  letter-spacing: .1em;
+  padding: .3rem .45rem;
+  border: 1px solid currentColor;
+  vertical-align: .1em;
+}
+.env.local { color: var(--jade); }
+.env.live { color: var(--seal); }
+.login h1 .env { margin-left: .4rem; }
+.login code {
+  font: 400 .8125rem/1 var(--f-mono);
+  background: var(--jade-soft);
+  padding: .15rem .3rem;
+}
 .top .right { margin-left: auto; display: flex; gap: .5rem; align-items: center; }
 
 /* ---------- 标签页 ---------- */
