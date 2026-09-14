@@ -135,10 +135,16 @@ a:hover { color: var(--chalk); }
 }
 .hero-head .tag { max-width: 32ch; }
 
-/* 巨字与主视觉叠在同一个格子里：图压住字的下半，形成穿插 */
+/* 巨字与主视觉叠在同一个格子里。两种主视觉的叠法相反：
+   后台传的照片压在字上（.hero-art），默认的月相图垫在字下（.hero-sky）——
+   照片是实心的，压上去才有份量；月相图是暗底上的几个亮点，压上去只会糊掉字。 */
 .hero-stage { position: relative; }
 
 .wordmark {
+  /* 巨字压在主视觉之上：月亮从笔画的缝隙里透出来，而不是被字挡成一块。
+     没有 z-index 的话，定位过的 .hero-sky 会盖住本行内文字 */
+  position: relative;
+  z-index: 1;
   font-weight: 700;
   /* 字号按**字数**算而不是写死：站名从三个字改成四个字时，写死的 29vw 会直接溢出。
      --n 由 site.js 按标题长度注入。 */
@@ -166,32 +172,64 @@ a:hover { color: var(--chalk); }
   filter: drop-shadow(0 24px 60px rgba(0, 0, 0, .55));
 }
 
-/* 飘在主视觉上的模块入口：位置像参考站那样错落，但内容是真数据 */
-.hero-pills {
+/* 默认主视觉：手写的夜空月相图（结构见 site.js 的 heroSky）。
+   颜色一律取自变量，没有一个写死的色值——换主题色它自己跟着变。 */
+.hero-sky {
   position: absolute;
-  inset: 0;
+  /* 不要负的 right：版心在宽屏是居中留白的，看不出来，可一到窄屏版心几乎顶满，
+     伸出去的那点就成了整页的横向滚动条。 */
+  right: 0;
+  bottom: -7%;
+  /* 跟着 vw 缩，而不是跟着版心的百分比：巨字的字号也是按 vw 算的，
+     两者同步缩，图才一直比巨字高出一点点。按百分比的话，窄屏上巨字缩了、
+     图没缩，月晕会一路顶到导航条上去。23rem 是上限，对齐巨字 19rem 的封顶。 */
+  width: min(23rem, 26vw);
+  height: auto;
+  z-index: 0;
   pointer-events: none;
+  /* 满月那团光晕比 viewBox 大，默认的 overflow:hidden 会在右上角切出一条
+     硬边——比没有光晕还难看。放它溢出去，本来就是要糊开的东西。 */
+  overflow: visible;
 }
-.hero-pills .pill {
-  position: absolute;
-  pointer-events: auto;
-  background: rgba(13, 10, 22, .72);
-  backdrop-filter: blur(8px);
-}
-.hero-pills .p1 { left: 34%; top: 34%; }
-.hero-pills .p2 { left: 24%; top: 62%; }
-.hero-pills .p3 { right: 4%; top: 22%; }
+/* 有月相图时把巨字收窄给它让位。
+   满幅的巨字会把整张图盖死——只剩边角露出来，看着像渲染坏了，而不是穿插。
+   收到 66vw 后，字仍然是首屏最大的东西，图完整露在右侧，两者只在
+   最后一个字上叠一点点，穿插是**看得出来**的那种叠。 */
+.hero-stage.has-sky .wordmark { font-size: clamp(2.5rem, calc(66vw / var(--n, 3)), 19rem); }
+/* 满月背后的一团光晕：让右上角不是"贴了个圆"，而是有光源 */
+.hero-sky .glow-a { stop-color: var(--violet); stop-opacity: .26; }
+.hero-sky .glow-b { stop-color: var(--violet); stop-opacity: 0; }
+/* 轨道用虚线：画的是月亮走过的路径，不是一根装饰弧 */
+.hero-sky .orbit { stroke: var(--violet-d); stroke-width: 1.5; stroke-dasharray: 2 7; opacity: .45; }
+.hero-sky .stars circle { fill: var(--muted); opacity: .5; }
+/* 月面本体是背景色的圆（暗部），亮部叠在上面 */
+.hero-sky .body { fill: var(--void-3); }
+.hero-sky .lit { fill: var(--violet); }
+/* 最后那轮满月亮到底，是整张图的落点，也是版面的视觉重心 */
+.hero-sky .moon.full .lit { fill: var(--chalk); }
 
-/* 没有主视觉图时（hero_image_id 为空）就排成一行放在巨字下面。
-   参考站那几个 pill 是压在**图**上的；压在白色巨字上只会糊成一片。 */
-.hero-pills.inline {
-  position: static;
+/* 七个相位依次亮起，像连着七个晚上。backwards 很关键：动画没开始前
+   就按首帧渲染，万一动画被跳过也只是"直接是最终态"，不会整张图空着。 */
+.hero-sky .moon {
+  animation: moon-rise .9s cubic-bezier(.22, .61, .36, 1) backwards;
+  animation-delay: calc(var(--d, 0) * .13s + .25s);
+}
+@keyframes moon-rise {
+  from { opacity: 0; transform: translate(0, 16px); }
+  to   { opacity: 1; transform: translate(0, 0); }
+}
+
+/* 模块入口排成一行放在巨字下面。
+   参考站那几个 pill 是压在**图**上的；压在白色巨字上只会糊成一片。
+   z-index 是必须的：不写会被上面定位过的 .hero-sky 盖住。 */
+.hero-pills {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: .5rem;
   flex-wrap: wrap;
   margin-top: 1rem;
 }
-.hero-pills.inline .pill { position: static; background: transparent; backdrop-filter: none; }
 
 .hero-foot {
   display: flex;
@@ -341,10 +379,11 @@ a:hover { color: var(--chalk); }
 .wordmark { animation: wipe .7s cubic-bezier(.2, .75, .25, 1) both; }
 .hero-head, .hero-foot { animation: rise .6s cubic-bezier(.2, .75, .25, 1) both .15s; }
 .hero-art { animation: rise .8s cubic-bezier(.2, .75, .25, 1) both .1s; }
-.hero-pills .pill { animation: rise .5s cubic-bezier(.2, .75, .25, 1) both; }
-.hero-pills .p1 { animation-delay: .45s; }
-.hero-pills .p2 { animation-delay: .55s; }
-.hero-pills .p3 { animation-delay: .65s; }
+/* 药丸按 DOM 顺序依次进场；--d 由 site.js 注入，栏目少一个也不会留下空档 */
+.hero-pills .pill {
+  animation: rise .5s cubic-bezier(.2, .75, .25, 1) both;
+  animation-delay: calc(var(--d, 0) * .1s + .45s);
+}
 .section { animation: rise .6s cubic-bezier(.2, .75, .25, 1) both; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -353,13 +392,27 @@ a:hover { color: var(--chalk); }
 
 /* ---------- 窄屏 ---------- */
 @media (max-width: 860px) {
-  /* 巨字与图在窄屏挤不下：图退到巨字下方，药丸改成普通一行，不再绝对定位 */
+  /* 巨字与图在窄屏挤不下：照片退到巨字下方，占满一行 */
   .hero-art { position: static; width: 100%; margin-top: 1rem; bottom: auto; }
-  .hero-pills { position: static; display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 1rem; }
-  .hero-pills .pill { position: static; backdrop-filter: none; }
   .card-me { margin-left: 0; }
   .row { grid-template-columns: 1fr; gap: .3rem; }
   .row .mark { justify-self: start; }
+}
+
+/* 月相图的断点比照片晚：它只占右侧三分之一，巨字挤一挤还排得下，
+   到 700 以下才真的没地方，退到巨字下面自成一块小插画。 */
+@media (max-width: 700px) {
+  .hero-stage.has-sky { display: flex; flex-direction: column; }
+  /* 图不在旁边挤了，字号放大一档。不到 90vw 是因为版心两侧还有内边距，
+     真按 90vw 排，最后一个字会被窗口切掉。 */
+  .hero-stage.has-sky .wordmark { font-size: clamp(2.5rem, calc(78vw / var(--n, 3)), 19rem); }
+  .hero-sky {
+    position: static;
+    order: 3;              /* DOM 里图在巨字**前面**（这样桌面端才压得住），窄屏要挪到最后 */
+    align-self: flex-end;  /* 靠右，接着巨字的走向，不在版心正中孤零零杵着 */
+    width: min(62%, 15rem);
+    margin-top: .75rem;
+  }
 }
 @media (max-width: 560px) {
   .topnav { width: 100%; margin-left: 0; order: 3; }

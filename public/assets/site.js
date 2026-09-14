@@ -102,16 +102,87 @@ function renderFoot(meta) {
 
 // ---------- 首屏 ----------
 
+/**
+ * 首屏主视觉：一轮月从新月长到满月，七个相位排在一条轨道上。
+ *
+ * 为什么是月相而不是随便一张夜空图：关于页里写着"游戏偏小、偏慢，
+ * 能在一两个晚上玩完"。月相本来就是**一串夜晚**——七个相位就是七个晚上，
+ * 最后一个才亮满。这张图在说站名，也在说做东西的节奏，不是拿来填空的装饰。
+ *
+ * 明暗界线按真的来算：它投影成一个椭圆，x 半轴 = r·|1-2f|，f 是亮面比例
+ * （0 新月 / 0.5 上弦 / 1 满月）。所以娥眉月的内缘是椭圆弧，不是两个圆错开
+ * 叠出来的那种假月牙——后者的内缘是正圆弧，形状是错的。
+ *
+ * 七个 f 取等差（.10 .25 .40 .55 .70 .85 1），不是按时间等分。按时间等分
+ * 得到的是余弦分布，两头挤成一团：头两个的亮边不到一像素宽，看着像渲染坏了，
+ * 第六个又跟满月分不出来。等差的 f 让七个都认得出来，每一个仍是真的终止线。
+ * 路径数据由脚本算好后写死在这里，运行时不做三角函数。
+ *
+ * 手写 SVG 而不是放位图：几 KB、任何分辨率都锐利、配色直接吃 site.css 的
+ * token（改主题色它自己跟着变）。后台传了 hero_image_id 就用那张图，
+ * 这张是默认兜底。
+ */
+function heroSky() {
+  return `
+    <svg class="hero-sky" viewBox="0 0 480 540" fill="none" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="sky-glow">
+          <stop class="glow-a" offset="0"/>
+          <stop class="glow-b" offset="1"/>
+        </radialGradient>
+      </defs>
+      <circle cx="391.3" cy="119.9" r="168" fill="url(#sky-glow)"/>
+      <path class="orbit" d="M58,512 C150,430 300,330 404,92"/>
+      <g class="stars">
+        <circle cx="118" cy="96" r="1.2" opacity=".5"/><circle cx="196" cy="58" r=".9" opacity=".35"/>
+        <circle cx="262" cy="142" r="1.5" opacity=".6"/><circle cx="158" cy="206" r="1" opacity=".4"/>
+        <circle cx="96" cy="268" r="1.3" opacity=".45"/><circle cx="214" cy="244" r=".8" opacity=".3"/>
+        <circle cx="300" cy="62" r="1.1" opacity=".5"/><circle cx="442" cy="214" r="1" opacity=".4"/>
+        <circle cx="414" cy="300" r="1.4" opacity=".55"/><circle cx="330" cy="358" r=".9" opacity=".35"/>
+        <circle cx="460" cy="404" r="1.2" opacity=".45"/><circle cx="268" cy="452" r="1" opacity=".4"/>
+        <circle cx="378" cy="486" r="1.5" opacity=".5"/><circle cx="190" cy="520" r=".9" opacity=".3"/>
+        <circle cx="44" cy="380" r="1.1" opacity=".4"/>
+      </g>
+      <g class="moon" style="--d:0">
+        <circle class="body" cx="66.4" cy="504.6" r="12"/>
+        <path class="lit" opacity="0.55" d="M66.4,492.6A12,12 0 0,1 66.4,516.6A9.6,12 0 0,0 66.4,492.6Z"/>
+      </g>
+      <g class="moon" style="--d:1">
+        <circle class="body" cx="116" cy="462.5" r="15"/>
+        <path class="lit" opacity="0.62" d="M116,447.5A15,15 0 0,1 116,477.5A7.5,15 0 0,0 116,447.5Z"/>
+      </g>
+      <g class="moon" style="--d:2">
+        <circle class="body" cx="171.5" cy="414.1" r="18"/>
+        <path class="lit" opacity="0.7" d="M171.5,396.1A18,18 0 0,1 171.5,432.1A3.6,18 0 0,0 171.5,396.1Z"/>
+      </g>
+      <g class="moon" style="--d:3">
+        <circle class="body" cx="230.2" cy="356.6" r="22"/>
+        <path class="lit" opacity="0.78" d="M230.2,334.6A22,22 0 0,1 230.2,378.6A2.2,22 0 0,1 230.2,334.6Z"/>
+      </g>
+      <g class="moon" style="--d:4">
+        <circle class="body" cx="286.1" cy="291.6" r="26"/>
+        <path class="lit" opacity="0.86" d="M286.1,265.6A26,26 0 0,1 286.1,317.6A10.4,26 0 0,1 286.1,265.6Z"/>
+      </g>
+      <g class="moon" style="--d:5">
+        <circle class="body" cx="340.5" cy="213.5" r="31"/>
+        <path class="lit" opacity="0.93" d="M340.5,182.5A31,31 0 0,1 340.5,244.5A21.7,31 0 0,1 340.5,182.5Z"/>
+      </g>
+      <g class="moon full" style="--d:6">
+        <circle class="body" cx="391.3" cy="119.9" r="42"/>
+        <path class="lit" opacity="1" d="M391.3,77.9A42,42 0 0,1 391.3,161.9A42,42 0 0,1 391.3,77.9Z"/>
+      </g>
+    </svg>`;
+}
+
 function renderHero(meta) {
   const s = meta.site;
   const title = s.site_title || '紫夜堂';
-  const hasArt = !!s.hero_image_id;
 
   // 三个模块入口。参考站那几个飘着的 pill 是纯装饰，这里换成带真实计数的入口——
   // 结构要编码信息。没有内容的栏目不出现，免得点进去是空的。
   const entries = ['works', 'apps', 'news']
     .filter((k) => meta.counts[k] > 0)
-    .map((k, i) => `<a class="pill p${i + 1}" href="${listHref(k)}">${esc(LABEL[k])}<span class="n">${meta.counts[k]}</span></a>`);
+    .map((k, i) => `<a class="pill" style="--d:${i}" href="${listHref(k)}">${esc(LABEL[k])}<span class="n">${meta.counts[k]}</span></a>`);
 
   const tags = String(s.hero_tags || '').split(/[,，]/).map((t) => t.trim()).filter(Boolean);
 
@@ -128,10 +199,12 @@ function renderHero(meta) {
         <div class="mark">${esc(s.hero_since || '')}</div>
       </div>
 
-      <div class="hero-stage">
+      <div class="hero-stage${s.hero_image_id ? '' : ' has-sky'}">
+        ${s.hero_image_id
+          ? `<img class="hero-art" src="${imgUrl(s.hero_image_id)}" alt="" aria-hidden="true">`
+          : heroSky()}
         <h1 class="wordmark" style="--n:${title.length}">${esc(title)}</h1>
-        ${hasArt ? `<img class="hero-art" src="${imgUrl(s.hero_image_id)}" alt="" aria-hidden="true">` : ''}
-        ${entries.length ? `<div class="hero-pills${hasArt ? '' : ' inline'}">${entries.join('')}</div>` : ''}
+        ${entries.length ? `<div class="hero-pills">${entries.join('')}</div>` : ''}
       </div>
 
       <div class="hero-foot">
