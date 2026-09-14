@@ -38,6 +38,17 @@ async function handle(req, res) {
     }
     sendJson(res, 404, { error: 'not found' });
   } catch (e) {
+    // 带 .status 的 4xx 是**客户端**的错（坏 JSON、体超限、中途断线）：
+    // 照着回，且不进 error 日志——日志里该只有我自己要修的东西。
+    const status = Number(e && e.status);
+    if (status >= 400 && status < 500) {
+      try {
+        sendJson(res, status, { error: e.message || '请求有误' });
+      } catch (_) {
+        /* 响应已发出 */
+      }
+      return;
+    }
     console.error('[error]', e);
     try {
       sendJson(res, 500, { error: '服务器内部错误' });

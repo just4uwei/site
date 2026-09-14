@@ -101,6 +101,9 @@ const PNG = Buffer.from(
   // ---- 管理台登录 ----
   r = await req('POST', '/api/admin/login', { password: 'wrong' });
   expect(r.status === 401, 'admin 密码错误 -> 401');
+  // 坏 JSON 是客户端的错，不该记成服务端错误——回 500 还会把垃圾请求刷进 error 日志
+  r = await req('POST', '/api/admin/login', Buffer.from('{not json'), { contentType: 'application/json' });
+  expect(r.status === 400, '请求体不是合法 JSON -> 400（不是 500）');
   r = await req('POST', '/api/admin/login', { password: 'admin' });
   expect(r.status === 200, 'admin 登录 -> 200');
   const tk = j(r.body).atoken;

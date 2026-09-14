@@ -50,8 +50,13 @@ function readJson(req) {
       try {
         const raw = Buffer.concat(chunks).toString('utf8');
         resolve(raw ? JSON.parse(raw) : {});
-      } catch (e) {
-        reject(e);
+      } catch (_) {
+        // 坏 JSON 是**客户端**的错，不是 500。带上 .status 让 router 照着回 400
+        // （和 readBinary 一个约定）。回 500 的代价不只是状态码不对：
+        // 它还会把别人发的垃圾请求刷进 error 日志，把真该修的东西淹掉。
+        const err = new Error('请求体不是合法 JSON');
+        err.status = 400;
+        reject(err);
       }
     });
     req.on('error', reject);
