@@ -179,12 +179,16 @@ a:hover { color: var(--chalk); }
   /* 不要负的 right：版心在宽屏是居中留白的，看不出来，可一到窄屏版心几乎顶满，
      伸出去的那点就成了整页的横向滚动条。 */
   right: 0;
-  bottom: -7%;
+  /* 顶边钉住、只往下伸。按 bottom 定位的话，舞台一矮图就整张往上爬——
+     线上就栽在这儿：那会儿还没有作品，药丸一个都不出，舞台矮了一截，
+     满月正好压住 SINCE 那行眉标。钉住顶边，栏目有没有都不会爬上去。
+     宽高都给了，SVG 自己按 viewBox 等比缩进这个框，不会变形。 */
+  top: -.5rem;
+  height: calc(100% + 3.5rem);
   /* 跟着 vw 缩，而不是跟着版心的百分比：巨字的字号也是按 vw 算的，
-     两者同步缩，图才一直比巨字高出一点点。按百分比的话，窄屏上巨字缩了、
+     两者同步缩，图才一直和巨字一般高。按百分比的话，窄屏上巨字缩了、
      图没缩，月晕会一路顶到导航条上去。23rem 是上限，对齐巨字 19rem 的封顶。 */
   width: min(23rem, 26vw);
-  height: auto;
   z-index: 0;
   pointer-events: none;
   /* 满月那团光晕比 viewBox 大，默认的 overflow:hidden 会在右上角切出一条
@@ -408,7 +412,8 @@ a:hover { color: var(--chalk); }
   .hero-stage.has-sky .wordmark { font-size: clamp(2.5rem, calc(78vw / var(--n, 3)), 19rem); }
   .hero-sky {
     position: static;
-    order: 3;              /* DOM 里图在巨字**前面**（这样桌面端才压得住），窄屏要挪到最后 */
+    height: auto;          /* 桌面端是钉在舞台上的固定高度，进了正常流就交回给 viewBox */
+    order: 3;              /* DOM 里图在巨字**前面**（这样桌面端才垫得住），窄屏要挪到最后 */
     align-self: flex-end;  /* 靠右，接着巨字的走向，不在版心正中孤零零杵着 */
     width: min(62%, 15rem);
     margin-top: .75rem;
